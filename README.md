@@ -1,4 +1,4 @@
-# QEES
+# Battery Aware Experiment Scheduling
 
 This project consists of two parts:
 
