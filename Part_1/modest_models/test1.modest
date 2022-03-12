@@ -1,0 +1,15 @@
+action frw, bkw;
+
+const int N = 1000000;
+
+int(0..N) count = 0;
+
+property Prop1 = E <> (count==N); // true
+
+property Prop3 = E <> (count>N); // false
+
+do{
+  :: when(count < N) frw {= count = count + 1=}
+  :: when(count > 0) bkw {= count = count - 1=}
+  :: when(count == N) break
+}

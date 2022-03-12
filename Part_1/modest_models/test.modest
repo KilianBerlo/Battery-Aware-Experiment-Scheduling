@@ -1,0 +1,21 @@
+//Test model to verify E <> works as expected in the model checker
+
+action a, b, c;
+
+const int BOUND = 20;
+
+int(0..BOUND) count = 0;
+bool did_c = false;
+
+property DidWeDoC = E <> did_c;
+
+do {
+:: a;
+   b {= count = min(count + 1, BOUND) =}
+:: when(count < 0) b;
+   a;
+   break
+};
+do {
+:: c {= did_c = true =}
+}

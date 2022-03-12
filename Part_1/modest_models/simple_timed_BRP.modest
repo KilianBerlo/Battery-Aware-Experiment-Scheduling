@@ -1,0 +1,62 @@
+//Modest TA model of a simple bounded retransmission protocol (simple BRP)
+
+action snd, rcv, snd_data, rcv_data, snd_ack, rcv_ack, timeout, to;
+const int TD_MIN = 4, TD_MAX = 7, TS = 10;
+bool success, failure, coll;
+
+property E_Succ = E(<>(success));                    //Check whether the message is well received (Sender received acknowledgement)
+property E_Fail = E(<>(failure));                    //Check whether the message is well received (Sender received acknowledgement)
+
+process Sender(int(0..2) n)                           //The Sender can send a message up to three times before the process flows into a deadlock
+{
+  clock c;
+  invariant(n <= 0) snd_data {= n = n - 1 =};
+  invariant(c <= TS) alt{
+  		      :: rcv_ack {= success = true =}
+  		      :: when (c >= TS) timeout;
+  		         alt{
+  		         :: when (n > 0) Sender(n)              //Retry
+  		         :: when (n == 0) invariant (n != 0) {= failure = true =};
+  		            stop                                //Deadlock on failure
+  		         }
+  		      }
+}
+
+process Receiver()                                    //Receiver sends an acknowledgement message out to the Sender
+{
+  rcv_data;
+  invariant(false) snd_ack;
+  Receiver()
+}
+
+process Channel()                                     //Lossy (some data gets discarded) communication channel with transmission delay
+{
+  clock c;                                            //Channel specific clock
+  alt{
+  :: snd {= c = 0 =};
+     invariant(c <= TD_MAX) alt{
+    			     :: when (c >= TD_MIN) rcv
+    			     :: snd {= coll = true =}; stop         //A new data packet is sent while a previous one was still in transmission, hence collision occurs
+    			     }
+  :: snd {= c = 0 =};
+     invariant(c <= TD_MAX) alt{
+    			     :: when (c >= TD_MIN) tau
+    			     :: snd {= coll = true =}; stop         //A new data packet is sent while a previous one was still in transmission, hence collision occurs
+    			     }
+  };
+  Channel()
+}
+
+par{                                                  //In parallel are working a Sender, a Receiver and two Channels that are inbetween the Sender and the Receiver
+::Sender(2)
+::relabel {to} by {timeout}
+  {
+    par{
+    ::relabel{snd,      rcv}                          //relabel{snd, rcv} by {snd_*, rcv_*} Channel() used to create multiple instances of the Channel() process
+           by{snd_data, rcv_data} Channel()
+    ::relabel{snd,      rcv,     timeout}
+           by{snd_ack,  rcv_ack, to} Channel()
+    }
+  }
+::Receiver()
+}

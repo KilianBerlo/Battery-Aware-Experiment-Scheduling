@@ -1,0 +1,23 @@
+The L-band and X-band jobs need the satellite to be in a job-specific attitude; if no such job is being executed, the satellite must be in its default attitude. Changing attitude must be performed immediately before and after an L- or X-band job is executed; it requires a slewing time of 10 minutes. In addition to that, prior to slewing into the correct attitude for an L-band job, instruments need to be "preheated" for 20 minutes.
+
+Characteristics of GomX-3:
+- Battery capacity: 149760000 mJ
+- Background power consumption: 2989 mW
+  (includes the continuously active ADS-B job)
+
+Job power consumption:
+- UHF:     2630 mW
+- X-band: 11945 mW
+- L-band:  3863 mW
+- Slew:     414 mW
+- Preheat:  414 mW
+
+The power provided by solar panels during insolation is attitude-dependent and thus changes depending on the currently active job:
+- X-band:    5700 mW
+- L-band:    6100 mW
+- Otherwise: 5700 mW
+
+You may round the boundaries of the experiment time windows (we recommend to round at least to seconds) and the power consumption values (if necessary for model-checking to terminate in reasonable time or memory); document any rounding in your report.
+
+The Python script convertdata.py converts the CSV data to start stop times in seconds from the reference datetime object called "starttime".
+The output can be found in data.txt and can be used in Modest

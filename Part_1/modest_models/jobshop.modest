@@ -1,0 +1,45 @@
+//Modest TA model of a simple job shop model where there is one worker and one machine available in a factory
+
+action start_job, job_done, start_machine, machine_done;
+int(0..1) jobs_in_progress = 0;
+int(0..160) jobs_done = 0;
+clock time;
+
+//The amount of jobs done in one working day (8 hours) can never exceed 13 and there will not be any job in progress at the end of the working day
+property E_time = E(<>(time == 480 && jobs_in_progress == 0 && jobs_done >= 13)); 
+
+process Worker()
+{
+  invariant(false) start_job;     //Worker starts the job immediately at the start of the working day after which
+  invariant(false) start_machine; //it starts the machine first thing when the job is started
+  machine_done;                   //When the machine is done
+  invariant(false) job_done;      //the job of the Worker is also done immediately after the machine is done
+  Worker()                        //Then the worker starts a new job
+}
+
+process Factory()                 //The Factory keeps track of the number of jobs that are in progess and the number of jobs that are done
+{
+  alt{
+	:: start_job {= jobs_in_progress = jobs_in_progress + 1 =}                                                   //When the job is started by the Worker, one more job in the Factory is in progress
+	:: alt{
+	 :: when(jobs_done == 160) job_done {= jobs_in_progress = jobs_in_progress - 1 =}                            //When the job is done and already 160 jobs are done no incrementation of the jobs_done count is applied
+	 :: when(jobs_done <= 159) job_done {= jobs_done = jobs_done + 1, jobs_in_progress = jobs_in_progress - 1 =} //When the job is done, one more job is marked as done
+	 }
+     };
+  Factory()
+}
+
+process Machine()
+{
+  clock x;                                          //An internal clock of the machine keeps track of how long the machine executes a job (which should be between 40 and 50 minutes)
+  start_machine {= x = 0 =};                        //When the Worker starts the machine the machine's clock is reset to 0
+  invariant(x <= 50) when(x >= 40) machine_done;    //It takes between 40 and 50 minutes for the machine to be done
+  Machine()
+}
+
+par                                                 //Worker, Factory and Machine run in parallel
+{
+:: Worker()
+:: Factory()
+:: Machine()
+}

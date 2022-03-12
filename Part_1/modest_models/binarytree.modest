@@ -1,0 +1,14 @@
+//Modest LTS model which checks whether state g can be reached in the binary tree
+
+action a, b, c, d, e, f, g, done;
+bool is_done;
+
+property "Eventually" = E<>(is_done); //Check whether the model can reach the state where is_done is set to true
+
+a;                                    //Action a is taken
+alt {                                 //Either action b or e is taken
+    ::  b; alt {::c; break            //When b is taken, either c or d is taken after which the model uses a break action
+                ::d; break}
+    ::  e; alt {::f; break            //When e is taken, either f is taken after which the model uses a break action or g is taken after which bool is_done is set to true
+                ::g; done {= is_done = true =}}
+}

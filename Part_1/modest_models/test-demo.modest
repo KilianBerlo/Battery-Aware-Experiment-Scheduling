@@ -1,0 +1,17 @@
+//Test model to test the functionality of rewards and to verify Xmin works as expected in the model checker
+
+action a, step, done;
+int(0..5) i;
+bool is_done; // initially false
+transient bool step;
+
+property "The Property" = E(<>(is_done));
+property "The Property (for the simulator)" = Pmax(<>(is_done));
+property "Cost-optimal" = Xmin(S(step ? 1 : 0), is_done); // should be 3 (you can verify Xmin properties the "check" (or "mcsta") command to double-check, but that always explores all reachable states, so it's likely less efficient than your own implementation)
+
+a;
+do {
+:: when(i <  5) step {= i++, step = true =}
+:: when(i >= 3) break
+};
+done {= is_done = true =}

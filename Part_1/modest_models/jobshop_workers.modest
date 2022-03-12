@@ -1,0 +1,74 @@
+//Modest TA model of a job shop model where two workers have to go for lunch during the first working day (= 8 hours = 480 clock ticks) and where two machines are available for use
+
+action start_job, w1_start_job, w2_start_job, job_done, w1_job_done, w2_job_done, start_machine_by_w1, start_machine_by_w2, start_machine_1, start_machine_2, start_machine_1_by_w1, start_machine_1_by_w2, start_machine_2_by_w1, start_machine_2_by_w2, machine_done_by_w1, machine_done_by_w2, machine_1_done, machine_2_done, machine_1_done_by_w1, machine_1_done_by_w2, machine_2_done_by_w1, machine_2_done_by_w2;
+int(0..2) jobs_in_progress = 0;
+int(0..160) jobs_done = 0;
+bool[] had_lunch = [false, false];
+bool machine_1_available = true, machine_2_available = true;
+clock time;
+
+property E_time = E(<>(time == 480 && jobs_in_progress == 0 && jobs_done >= 12 && had_lunch[0] == true && had_lunch[1] == true)); //The amount of jobs done in one working day (8 hours) can never exceed 11, and at the end of a working day there will not be any job in progress and both workers will have had lunch
+
+process Worker(int l)
+{
+  clock x;                                                                      //With the internal clock the workers time without his/her lunch is tracked
+  invariant(false) alt{                                                                          //Worker either starts a job or goes for lunch
+     :: when(had_lunch[l] == false && time >= 180 && time <= 300) {= x = 0 =};
+        invariant(x <= 30) when(x >= 30) {= had_lunch[l] = true =}
+     :: start_job;
+        invariant(false) alt{                                                                    //When a worker starts a job he/she either starts machine 1 (if available) or machine 2 (if available)
+           :: when(machine_1_available == true) 	start_machine_1	{= machine_1_available = false =};
+              					  	machine_1_done  	{= machine_1_available = true =}
+           :: when(machine_2_available == true) 	start_machine_2 	{= machine_2_available = false =};
+              					  	machine_2_done  	{= machine_2_available = true =}
+           };
+        invariant(false) job_done
+  };
+  Worker(l)
+}
+
+process Factory()                 //The Factory keeps track of the number of jobs that are in progess and the number of jobs that are done
+{
+  alt{
+	:: w1_start_job {= jobs_in_progress = jobs_in_progress + 1 =}          //When the job is started by the Worker, one more job in the Factory is in progress
+	:: w2_start_job {= jobs_in_progress = jobs_in_progress + 1 =}          //When the job is started by the Worker, one more job in the Factory is in progress
+	:: w1_job_done; alt{
+	      		   :: when(jobs_done == 160) {= jobs_in_progress = jobs_in_progress - 1 =}                                 //When the job is done and already 160 jobs are done no incrementation of the jobs_done count is applied
+	      		   :: when(jobs_done <= 159) {= jobs_done = jobs_done + 1, jobs_in_progress = jobs_in_progress - 1 =} //When the job is done, one more job is marked as done
+	   }
+	:: w2_job_done; alt{
+	      		   :: when(jobs_done == 160) {= jobs_in_progress = jobs_in_progress - 1 =}                                 //When the job is done and already 160 jobs are done no incrementation of the jobs_done count is applied
+	      		   :: when(jobs_done <= 159) {= jobs_done = jobs_done + 1, jobs_in_progress = jobs_in_progress - 1 =} //When the job is done, one more job is marked as done
+	   }
+     };
+  Factory()
+}
+
+process Machine(int MIN_TIME, int MAX_TIME)                                     //Since each Machine has different speeds, the minimum time and maximum time to complete a task can be indicated when calling the machine
+{
+  clock x;                                                                      //An internal clock of the machine keeps track of how long the machine executes a job (which should be between MIN_TIME and MAX_TIME minutes)
+  alt{
+     ::start_machine_by_w1 {= x = 0 =};                                                    //When the Worker starts the machine the machine's clock is reset to 0
+       invariant(x <= MAX_TIME) when(x >= MIN_TIME) machine_done_by_w1                        //It takes between MIN_TIME and MAX_TIME minutes for the machine to be done
+     ::start_machine_by_w2 {= x = 0 =};                                               //When the Worker starts the machine the machine's clock is reset to 0
+       invariant(x <= MAX_TIME) when(x >= MIN_TIME) machine_done_by_w2                        //It takes between MIN_TIME and MAX_TIME minutes for the machine to be done
+  };
+  Machine(MIN_TIME, MAX_TIME)
+}
+
+par                                                                             //There are two Workers working in the Factory and two Machines running in the Factory
+{
+:: par{                                                                         //To make a distinction between the two Workers we have to relabel the Worker's actions
+      :: relabel { start_job, job_done, start_machine_1, start_machine_2, machine_1_done, machine_2_done }
+         by      { w1_start_job, w1_job_done, start_machine_1_by_w1, start_machine_2_by_w1, machine_1_done_by_w1, machine_2_done_by_w1 } Worker(0)
+      :: relabel { start_job, job_done, start_machine_1, start_machine_2, machine_1_done, machine_2_done }
+         by      { w2_start_job, w2_job_done, start_machine_1_by_w2, start_machine_2_by_w2, machine_1_done_by_w2, machine_2_done_by_w2 } Worker(1)
+   }
+:: Factory()
+:: par{                                                                         //To make a distinction between the two Machines we have to relabel the Machine's actions
+      :: relabel { start_machine_by_w1, start_machine_by_w2, machine_done_by_w1, machine_done_by_w2 }
+         by      { start_machine_1_by_w1, start_machine_1_by_w2, machine_1_done_by_w1, machine_1_done_by_w2 } Machine(40, 50)
+      :: relabel { start_machine_by_w1, start_machine_by_w2, machine_done_by_w1, machine_done_by_w2 }
+         by      { start_machine_2_by_w1, start_machine_2_by_w2, machine_2_done_by_w1, machine_2_done_by_w2 } Machine(70, 100)
+   }
+}

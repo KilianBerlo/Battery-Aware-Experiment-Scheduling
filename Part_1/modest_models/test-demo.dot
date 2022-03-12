@@ -1,0 +1,17 @@
+digraph G {
+	rankdir = TB;
+	bgcolor = transparent;
+	node [style = filled, fillcolor = white];
+__global_vars__ [shape=plaintext, fillcolor="transparent", label=<<table border="0"><tr><td align="left" valign="top" colspan="2">Global variables:</td></tr><tr><td align="left" valign="top">i</td><td align="left" valign="top" balign="left">= 0</td></tr><tr><td align="left" valign="top">is_done</td><td align="left" valign="top" balign="left">= false</td></tr><tr><td align="left" valign="top">step</td><td align="left" valign="top" balign="left">= false</td></tr></table>>];
+	0 [shape=box, label=<a;<br align="left" />do {<br align="left" />:: when(i &lt; 5) step {= i = i + 1, step = true =}<br align="left" />:: when(i &gt;= 3) break<br align="left" />};<br align="left" />done {= is_done = true =}<br align="left" />>];
+	1 [shape=box, label=<do {<br align="left" />:: when(i &lt; 5) step {= i = i + 1, step = true =}<br align="left" />:: when(i &gt;= 3) break<br align="left" />};<br align="left" />done {= is_done = true =}<br align="left" />>];
+	0 -> 1 [label=<a<br align="left" />>];
+	1 -> 1 [label=<i &lt; 5, step, {= i = i + 1, step = true =}<br align="left" />>];
+	2 [shape=box, label=<done {= is_done = true =}<br align="left" />>];
+	1 -> 2 [label=<i &gt;= 3, τ<br align="left" />>];
+	3 [shape=box, label=<<font face="Segoe UI Symbol, GNU Unifont">✓</font><br align="left" />>];
+	2 -> 3 [label=<done, {= is_done = true =}<br align="left" />>];
+	_____initial4 [shape=none, style=invisible, label=""];
+	_____initial4 -> 0 [label=<true<br align="left" />>];
+
+}

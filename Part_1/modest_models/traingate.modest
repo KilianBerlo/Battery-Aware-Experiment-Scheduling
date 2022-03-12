@@ -1,0 +1,42 @@
+// Modest TA model immitating the workings of a traincrossing with one train
+
+action close, open, approaching, leave;
+const int MIN_TIME = 7, MAX_TIME = 42;
+bool closed = false, at_crossing = false;
+
+property E_Safe = E(<>(at_crossing == true && closed == false));                //Check whether the train will be on the crossing at times when the gate is not closed
+
+process Train ()                                                                //The initial state of the Train is at the Station
+{
+  clock t;                                                                      //Train specific clock to keep track of the time it takes the Train to approach the crossing and be at the crossing
+  invariant(t <= 30) when (t >= 4) approaching {= t = 0 =};                     //Action that leads to the Approaching state, a train is only allowed to stay at the Station a minimum of 4 time units (this is the time it takes for the Gate to start receiving inputs again) maximum of 30 time units
+  invariant(t <= MAX_TIME) when(t >= MIN_TIME) {= t = 0, at_crossing = true =}; //Action that leads to the Crossing
+  invariant(t <= 10) leave {= at_crossing = false =};                           //Action that leads back to the Station
+  Train()
+}
+
+process Gate()                                            //Initially the Gate is Open
+{
+  clock c;                                                //Gate specific clock to keep track of the time it takes for the Gate to close or open
+  close {= c = 0 =};                                      //Action that leads to the Closing state - This action can only be taken if the Controller model also takes the transition with action "close"
+  invariant(c <= 6) when (c >= 6) {= closed = true =};    //Action that leads to the Gate in a Closed state
+  open {= c = 0 =};               		                    //Action that leads to the state where the Gate is Opening - This action can only be taken if the Controller model also takes the transition with action "open"
+  invariant(c <= 4) when (c >= 4) {= closed = false =};   //Action that leads the Gate back to its initial state: Open
+  Gate()
+}
+
+
+process Controller()                              //Initially the Controller is waiting for the sign that the Train is Approaching the Crossing
+{
+  approaching;                                    //This action can only be taken if the Train model also takes the transition with action "approaching"
+  invariant(false) close;                         //Action that follows directly from the Train approaching and leads to the Gate Closing immediately (Urgent)
+  leave;                                          //Action that leads to the Gate Opening (Urgent) - This action can only be taken if the Train model also takes the transition with action "leave"
+  invariant(false) open;                          //Action that follows directly from the Train leaving the Crossing and leads to the Gate Opening immediately (Urgent)
+  Controller()
+}
+
+par{                                              //Run Train(), Gate() and Controller() in parallel
+  ::Train()
+  ::Gate()
+  ::Controller()
+}

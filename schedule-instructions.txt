@@ -1,0 +1,48 @@
+Step-by-step instructions to reproduce and validate the final schedule.
+
+The two files called "final-schedule.csv" and "final-schedule.html" that are located in the root folder contain the human-readable schedules.
+The two files called "final-schedule_plot.bmp" is a bitmap of the Simulink KiBaM plot of the KiBaM model input CSV: "final-schedule_simulink.csv".
+The file "final-schedule.sh" is a shell script to reproduce the final schedule
+
+The final schedule has a duration of 2160 minutes which is one-and-a-half day. Some remarks will be given about the different files and finally instructions how to reproduce the final schedule.
+
+###################################################################################################################################################################################################
+final-schedule.csv:
+The CSV is divided into multiple columns:
+- Job
+- Start Time (UTC) 
+- Stop Time (UTC)
+- Duration  (sec) 
+
+Job lists what L-band, X-band or UHF job is scheduled or skipped. When the duration is bigger than 0, the job is scheduled. 
+When the duration is 0, this means that the job is skipped. Only the amount of skipped jobs can be derived from the CSV.
+This is because the Modest model is skipping jobs after a scheduled job is finished. So for example, the first job that is scheduled is 3F3.
+The stop time of 3F3 is "20 Mar 2016 07:28:00". During the execution of 3F3, 3 L-band jobs and 1 X-band job were skipped in the corresponding time window.
+This is indicated by the start/end times being the same as the end time of the 3F3 job and the duration of 0. The next job that is scheduled is Kourou.
+
+###################################################################################################################################################################################################
+final-schedule.html:
+This is a Gantt chart of the schedule. This chart presents a clear overview of all the scheduled jobs.
+The y-axis represents the jobs that are scheduled and the x-axis the date and time. This chart is based on the data presented in "final-schedule.csv".
+
+###################################################################################################################################################################################################
+final-schedule.bmp:
+This is a bitmap of the Simulink KiBaM plot. The SoC of the battery is greater or equal than 40, hence the schedule is feasible. 
+
+###################################################################################################################################################################################################
+final-schedule_simulink.csv:
+This CSV contains the baseload of the model in seconds. This CSV can be used as input for the Simulink KiBaM model.
+The time duration of the KiBaM model must be set on 129600 seconds (2160 minutes) to get the same plot as "final-schedule.bmp".
+
+###################################################################################################################################################################################################
+final-schedule.sh:
+This shell script reproduces the final schedule files. Issue the following commands and don't forget to install the necessary python dependencies before executing:
+$ chmod +x final-schedule.sh
+$ ./final-schedule.sh
+The --t parameter is enabled to print the time progress of the model checker. This is not enabled as default. 
+It can take some time before the result: It took around 220 seconds to complete on an i5-4690k@4.5GHz. 
+
+After the results are printed, the default browser should open with a Gantt chart that represents the resulting schedule. 
+The files can be located in output/ :
+$ cd output && ls -l
+

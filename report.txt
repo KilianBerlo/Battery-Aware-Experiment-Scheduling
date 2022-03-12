@@ -1,0 +1,127 @@
+QUANTITATIVE EVALUATION OF EMBEDDED SYSTEMS 2020-2021
+    Group: 2
+    Members:
+        s2204320 - Glen te Hofsté   - g.tehofste@student.utwente.nl
+        s2613352 - Kilian van Berlo - k.vanberlo@student.utwente.nl
+        s2396335 - Edian Annink     - e.b.annink@student.utwente.nl
+
+PART 1
+    The Python based model checker is straightforward to use. 
+    An example model which we could call: example_model.py can be run by the command: 
+        
+        python checker.py example_model.py
+
+    Initially the checker gives an overview of the two types of properties which are to be checked, namely the "exist" and "xmin" properties.
+    It first prints the "exist" reachability properties as follow:
+    
+        Property_E: exists(eventually(ap(0)))
+
+    Follwed by the "xmin" reachability properties:
+    
+        Property_X: xmin(0, ap(1))
+
+    When an algorithms starts checking it announces its start by printing for example: 
+      
+        Checking "Property_E" with DFS
+        Checking "Property_X" with Best First Search
+
+    The model checker has support for several algorithms. As a default the checker uses Depth-First Search (DFS) to explore the state space for "exist" properties.
+    The DFS algorithm gives the best performance in most cases. Breadth-First Search (BFS) is also an algorithm which is supported by the checker.
+    BFS can be selected over DFS by invoking --bfs as follows:
+
+        python checker.py example_model.py --bfs
+
+    For "xmin" properties the default checker uses the Best First Search algorithm, which overall gives the best performance.
+    Alternatively the Dijkstra algorithm can be used for checking the model.
+    Dijkstra can be selected over Best First Search as follows:
+
+        python checker.py example_model.py --dijkstra
+    
+    After the algorithm has finished it prints whether the property holds and the run time to the console, which for example looks like:
+
+        The property "Property_E": exists(eventually(ap(0))) holds
+        Checked in 0.01 seconds.
+        
+        The property "Property_X": xmin(0, ap(1)) holds with a total cost of: 1
+        Checked in 0.1 seconds.
+
+    If a trace of the path is desired to be printed to the console this can be requested by invoking --t.
+    The diagnostic trace is formatted as follows: '--- transition --> state'. It first prints the transtion, followed by the state it transitions to.
+    The trace can be invoked as follows: 
+
+        python checker.py example_model.py --t
+    
+    When a schedule is to be created from a cost-optimal reachability property this can be done by invoking --s.
+    The schedule will then be created based on the "clk" and "load" variables. These variables cannot be changed. The output can be found in the /output/ folder.
+    The schedule generator will create a file which can be imported into simulink as a csv file with the name simulink_schedule.csv
+    Each of the job types: '3F2', '3F3', 'UHF', 'Kourou', 'Toulouse' will have their own human readable schedule file.
+    The formatting is as follows: "Start Time (UTCG)","Stop Time (UTCG)","Duration (sec)".
+    If the duration is 0 seconds the job has been skipped at that time point.
+    A schedule can be created by invoking the following:
+
+      python checker.py example_model.py --s
+    
+    Additional debug information from "inside" the algorithm can be requested by invoking --d as follows:
+
+      python checker.py example_model.py --d
+
+    When some of the test cases are ran the following result can be expected:
+        - jobshop_lunch       "E_time": holds (0.22 seconds)
+        - jobshop_workers     "E_time": holds (79.07 seconds)
+        - traingate           "E_Safe": does not hold (0.00 seconds)
+        - simple_timed_BRP    "E_Succ": holds (0.00 seconds), "E_Fail" holds (0.00 seconds)
+
+    For testing the model checker, several test cases are created:
+      binarytree 	        -   Modest LTS model which checks whether state g can be reached in the binary tree
+      jobshop    	        -   Modest TA model of a simple job shop model where there is one worker and one machine available in a factory
+      jobshop_lunch	      -   Modest TA model of a job shop model where a worker has to go for lunch during the first working day (= 8 hours = 480 clock ticks)
+      jobshop_workers     -   Modest TA model of a job shop model where two workers have to go for lunch during the first working day (= 8 hours = 480 clock ticks) and where two machines are available for use
+      simple_BRP	        -   Modest LTS model of a simple bounded retransmission protocol
+      simple_BRP_Xmin	    -   Modest TA model of a simple bounded retransmission protocol with action and rate rewards in order to be able to determine the path with the lowest cost
+      simple_timed_BRP    -   Modest TA model of a simple timed bounded retransmission protocol
+      test		            -   Simple test model to verify E <> works as expected in the model checker
+      test-demo	          -   Simple test model to test the functionality of rewards and to verify Xmin works as expected in the model checker
+      traingate	          -   Modest TA model immitating the workings of a traincrossing with one train
+
+PART 2
+    The model is build up out of several parts, each with a different purpose. 
+    The purposes of different parts of the model are:
+        - Battery_job():
+          With every update of a job process in the satelite it is checked whether this job can be completed in the SoC that is left without dropping below 40%.
+          When the SoC reaches the maximum battery capacity, the value of the SoC does not increase any further.
+          When the SoC would still be bounded between the maximum battery capactiy and the lower bound of the SoC (40%) then the SoC is updated accordingly.
+          When the SoC would drop below the lower bound during a job process then the model is halted.
+        - L_Band_Inmarsat_3F2_job():
+          Carry out a L_Band job in the Inmarsat3F2 area.
+        - L_Band_Inmarsat_3F3_job():
+          Carry out a L_Band job in the Inmarsat3F3 area.      
+        - PV_job():
+          Every time the satellite gets in the sun, the battery starts charging and it stops the moment the satellite is out of the sun.
+        - UHF_job():
+          A UHF job process downlinks collected data to, and uplinks new instructions from the GomSpace base station in Aalborg, Denmark.
+        - X_Band_Kourou_job():
+          Carry out a X_Band job in the Kourou area.      
+        - X_Band_Toulouse_job():
+          Carry out a X_Band job in the Toulouse area.      
+        - L_X_Skip():
+          Check for every job if this job was active in the time window of the last executed job in L_X_Scheduler().
+          If this is the case, this job is skipped.
+        - L_X_Scheduler():
+          Process that schedules L_Band_Inmarsat_*_job() or X_band_*_job() jobs at runtime.
+        - par:
+          The model consists of four process behaviours which are composed in parallel.
+
+    During the design of the model some assumptions and abstractions were made.
+    Assumptions and abstractions made in this model are:
+        - Preheating and slewing have the same power consumption, they only differ in timing and duration.
+          The model is hence simplified by using the same load for preheating and slewing phases.
+          In the paper preheating and slewing are regarded as separate events.
+        - During an insolation period the satelite will not change its attitude.
+        - Instead of updating the battery continuously, the model is an abstract representation of reality and updates the battery based on the activity of the processes, just like in the paper.
+          Also each clock tick represents one minute instead of one second since this will greatly reduce the state space and is still sufficient for coming up with a model that meets the requirements.
+
+    As can be seen in the final-schedule_plot.bmp from Simulink the final schedule is safe.
+    Not all schedules always turn out to be safe when simulated on a linear battery model first however.
+    In the candidate schedule (candidate_schedule.csv) the schedule interval was set to 300 (instead of 600), but in this case it turned out that the model broke some of the requirements when simulated via Simulink with a kinetic battery model.
+    The final schedule obeys to all the requirements that the model is expected to follow, both with a linear battery model and a kinetic battery model.
+    Hence, it is suitable for actual use on the satellite.

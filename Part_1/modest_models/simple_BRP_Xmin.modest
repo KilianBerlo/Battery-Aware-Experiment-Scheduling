@@ -1,0 +1,57 @@
+//Modest TA model of a simple bounded retransmission protocol with action and rate rewards in order to be able to determine the path with the lowest cost
+
+action snd, rcv, snd_data, rcv_data, snd_ack, rcv_ack, timeout, to;
+bool success, failure;
+int TS = 100;
+
+transient int(0..1) sent = 0;
+transient bool waiting;
+
+//Check the minimal number of times we have to send data until success
+property R_Succ_Sent = Xmin(S(sent), success);
+//Check the minimal time spent sending until success
+property R_Succ_Wait = Xmin(T(waiting ? 1 : 0), success);
+
+process Sender(int(0..2) n)
+{
+    clock c;
+
+    invariant(n <= 0) snd_data {= n = n - 1, sent = 1 =};         //Setting the transient variable sent to 1 for each time the transition snd_data is taken
+    with(waiting) invariant(c <= TS) alt {                        //Waiting in this location on a rcv_ack or sender timeout TS to expire, increasing rate reward while waiting in this location
+    :: rcv_ack {= success = true =}                               
+    :: when(c >= TS) timeout;
+        alt {
+        :: when(n > 0) Sender(n)                                  //Retry
+        :: when(n == 0) invariant(n != 0) {= failure = true =}; 
+            stop                                                  //Deadlock on failure
+        }
+    }   
+}
+
+process Receiver()                                  //Receiver sends an acknowledgement message out to the Sender
+{
+  rcv_data; snd_ack; Receiver()
+}
+
+process Channel()                                   //Lossy (some data gets discarded) communication channel
+{
+  snd; alt{
+  ::rcv
+  ::timeout                                         //Message lost
+  };
+  Channel()
+}
+
+par{                                                //In parallel are working: a Sender, a Receiver and two Channels that are inbetween the Sender and the Receiver
+::Sender(2)
+::relabel {to} by {timeout}
+  {
+    par{
+    ::relabel{snd,      rcv}                        //Relabel{snd, rcv} by {snd_*, rcv_*} Channel() used to create multiple instances of the Channel() process
+           by{snd_data, rcv_data} Channel()
+    ::relabel{snd,      rcv,     timeout}
+           by{snd_ack,  rcv_ack, to} Channel()
+    }
+  }
+::Receiver()
+}
