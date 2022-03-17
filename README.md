@@ -61,6 +61,6 @@ Refer to [report.txt](report.txt) to learn more about the Modest model [GomX-3.m
 
 ## Authors
 
-* s2396335 - **Edian Annink** - *e.b.annink@student.utwente.nl*
-* s2204320 - **Glen te Hofsté** - *g.tehofste@student.utwente.nl*
+* **Edian Annink**
+* **Glen te Hofsté**
 * s2613352 - **Kilian van Berlo** - *k.vanberlo@student.utwente.nl*
